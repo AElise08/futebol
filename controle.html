@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Controle — Futebol 3D</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+  html, body { width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: none; }
+  body {
+    font-family: 'Archivo', system-ui, sans-serif;
+    background: radial-gradient(ellipse at 50% 0%, #14261a 0%, #0a120d 75%);
+    color: #f2f5f0;
+    display: flex; flex-direction: column;
+  }
+
+  #topo {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 18px; font-size: 12px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase; color: #9fb0a4;
+  }
+  #status { display: flex; align-items: center; gap: 7px; }
+  #status .dot { width: 8px; height: 8px; border-radius: 50%; background: #e0a13a; }
+  #status.on .dot { background: #52d273; box-shadow: 0 0 8px #52d273; }
+  #status.err .dot { background: #d8452e; }
+
+  #area { flex: 1; display: flex; position: relative; }
+
+  #zona-stick { flex: 1; position: relative; }
+  #dica-stick {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 130px; height: 130px; border-radius: 50%;
+    border: 2px dashed rgba(255,255,255,0.18);
+    display: grid; place-items: center;
+    color: rgba(255,255,255,0.3); font-size: 11px;
+    font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    pointer-events: none;
+  }
+
+  #zona-botoes {
+    flex: 1; display: grid; place-items: center; position: relative;
+  }
+  #diamante {
+    position: relative; width: 230px; height: 230px;
+  }
+  .btn {
+    position: absolute; width: 86px; height: 86px; border-radius: 50%;
+    border: none; font-family: inherit; font-weight: 800; font-size: 13px;
+    letter-spacing: 0.06em; text-transform: uppercase; color: #08150c;
+    display: grid; place-items: center;
+    transition: transform 0.07s ease, filter 0.07s ease;
+  }
+  .btn:active { transform: scale(0.9); filter: brightness(1.25); }
+  #b-chute  { background: #d8452e; color: #fff; top: 0; left: 72px; }
+  #b-passe  { background: #52d273; bottom: 0; left: 72px; }
+  #b-desarme{ background: #f2c531; top: 72px; left: 0; }
+  #b-trocar { background: #7d92ff; color: #0b1030; top: 72px; right: 0; }
+
+  #b-sprint {
+    position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+    width: 190px; height: 52px; border-radius: 999px;
+    border: 2px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.06);
+    color: #f2f5f0; font-family: inherit; font-weight: 800; font-size: 14px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  #b-sprint.ativo { background: #52d273; color: #08150c; border-color: #52d273; }
+
+  #girar {
+    position: fixed; inset: 0; z-index: 50;
+    background: #0a120d; display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; text-align: center; padding: 30px;
+  }
+  #girar span { font-size: 44px; }
+  #girar p { color: #9fb0a4; font-size: 15px; max-width: 260px; line-height: 1.5; }
+  @media (orientation: portrait) { #girar { display: flex; } }
+</style>
+</head>
+<body>
+<div id="topo">
+  <span>Futebol 3D · Controle</span>
+  <span id="status"><span class="dot"></span><span id="status-txt">Conectando…</span></span>
+</div>
+
+<div id="area">
+  <div id="zona-stick"><div id="dica-stick">Mover</div></div>
+  <div id="zona-botoes">
+    <div id="diamante">
+      <button class="btn" id="b-chute">Chute</button>
+      <button class="btn" id="b-passe">Passe</button>
+      <button class="btn" id="b-desarme">Desarme</button>
+      <button class="btn" id="b-trocar">Trocar</button>
+    </div>
+  </div>
+</div>
+
+<button id="b-sprint">Segure · Sprint</button>
+
+<div id="girar">
+  <span>📱↻</span>
+  <p>Gire o celular para o modo paisagem para jogar.</p>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.2/nipplejs.min.js"></script>
+<script>
+  const peerAlvo = new URLSearchParams(location.search).get('peer');
+  const status = document.getElementById('status');
+  const statusTxt = document.getElementById('status-txt');
+  const estado = { x: 0, y: 0, sp: false };
+  let conn = null;
+
+  // ---------- conexão com o jogo ----------
+  if (!peerAlvo) {
+    status.classList.add('err');
+    statusTxt.textContent = 'Link sem código do jogo';
+  } else {
+    const peer = new Peer();
+    peer.on('open', () => {
+      conn = peer.connect(peerAlvo, { reliable: false });
+      conn.on('open', () => {
+        status.classList.add('on');
+        statusTxt.textContent = 'Conectado';
+        vibra([60, 40, 60]);
+        setInterval(() => {
+          if (conn.open) conn.send({ t: 'st', x: estado.x, y: estado.y, sp: estado.sp });
+        }, 33); // ~30Hz
+      });
+      conn.on('data', d => { if (d.t === 'v') vibra(d.p); });
+      conn.on('close', () => {
+        status.classList.remove('on'); status.classList.add('err');
+        statusTxt.textContent = 'Desconectado';
+      });
+      conn.on('error', () => {
+        status.classList.add('err');
+        statusTxt.textContent = 'Erro de conexão';
+      });
+    });
+    peer.on('error', () => {
+      status.classList.add('err');
+      statusTxt.textContent = 'Falha ao conectar';
+    });
+  }
+
+  function vibra(p) { if (navigator.vibrate) navigator.vibrate(p); }
+  function botao(nome) {
+    if (conn?.open) conn.send({ t: 'b', b: nome });
+    vibra(25);
+  }
+
+  // ---------- joystick ----------
+  const stick = nipplejs.create({
+    zone: document.getElementById('zona-stick'),
+    mode: 'static',
+    position: { left: '50%', top: '50%' },
+    size: 130,
+    color: '#52d273',
+    restOpacity: 0.5,
+  });
+  stick.on('move', (e, dados) => {
+    if (!dados.vector) return;
+    estado.x = dados.vector.x;
+    estado.y = -dados.vector.y; // eixo do jogo: +z é "pra baixo" na tela
+  });
+  stick.on('end', () => { estado.x = 0; estado.y = 0; });
+
+  // ---------- botões ----------
+  for (const nome of ['chute', 'passe', 'desarme', 'trocar']) {
+    const el = document.getElementById('b-' + nome);
+    el.addEventListener('touchstart', e => { e.preventDefault(); botao(nome); }, { passive: false });
+    el.addEventListener('mousedown', () => botao(nome));
+  }
+  const sprint = document.getElementById('b-sprint');
+  const ligaSprint = v => { estado.sp = v; sprint.classList.toggle('ativo', v); if (v) vibra(15); };
+  sprint.addEventListener('touchstart', e => { e.preventDefault(); ligaSprint(true); }, { passive: false });
+  sprint.addEventListener('touchend', () => ligaSprint(false));
+  sprint.addEventListener('mousedown', () => ligaSprint(true));
+  sprint.addEventListener('mouseup', () => ligaSprint(false));
+
+  // ---------- manter a tela acesa + fullscreen ----------
+  let wakeLock = null;
+  async function pegarWakeLock() {
+    try { wakeLock = await navigator.wakeLock?.request('screen'); } catch (e) { /* sem suporte */ }
+  }
+  pegarWakeLock();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') pegarWakeLock();
+  });
+  document.body.addEventListener('touchstart', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+  }, { once: true });
+</script>
+</body>
+</html>
