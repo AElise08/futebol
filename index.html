@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Futebol 3D</title>
+<title>Fuga do Tribunal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&display=swap" rel="stylesheet">
 <style>
@@ -52,15 +52,18 @@
     border-left: 1px solid var(--line);
   }
 
-  #jogador-info {
-    position: absolute; bottom: 24px; left: 20px;
+  .jogador-info {
+    position: absolute; bottom: 24px;
     background: var(--glass); backdrop-filter: blur(8px);
     border: 1px solid var(--line); border-radius: 10px;
     padding: 10px 14px; min-width: 170px;
   }
-  #jogador-nome { font-size: 13px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 7px; }
-  #stamina-trilho { height: 5px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; }
-  #stamina-barra { height: 100%; width: 100%; border-radius: 3px; background: var(--ok); transition: width 0.15s linear; }
+  #info-jessica { left: 20px; border-left: 3px solid var(--azul); }
+  #info-mike { right: 20px; border-left: 3px solid var(--verde); }
+  .jogador-info .nome { font-size: 13px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 7px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .jogador-info .vidas { font-size: 9px; letter-spacing: 2px; color: #e0a13a; }
+  .stamina-trilho { height: 5px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; }
+  .stamina-barra { height: 100%; width: 100%; border-radius: 3px; background: var(--ok); transition: width 0.15s linear; }
 
   #minimapa {
     position: fixed; z-index: 15;
@@ -78,17 +81,20 @@
   #minimapa .legenda span { display: flex; align-items: center; gap: 4px; }
   #minimapa .legenda i { width: 8px; height: 8px; border-radius: 50%; }
 
-  #conexao {
+  #conexoes {
     position: absolute; top: 20px; right: 20px;
+    display: flex; flex-direction: column; gap: 6px; align-items: flex-end;
+  }
+  .conexao {
     display: flex; align-items: center; gap: 8px;
     background: var(--glass); backdrop-filter: blur(8px);
     border: 1px solid var(--line); border-radius: 999px;
     padding: 7px 14px; font-size: 12px; font-weight: 600;
     color: var(--txt-dim); letter-spacing: 0.04em;
   }
-  #conexao .dot { width: 8px; height: 8px; border-radius: 50%; background: #6b7a70; }
-  #conexao.on .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
-  #conexao.on { color: var(--txt); }
+  .conexao .dot { width: 8px; height: 8px; border-radius: 50%; background: #6b7a70; }
+  .conexao.on .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .conexao.on { color: var(--txt); }
 
   #aviso {
     position: absolute; top: 38%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
@@ -103,7 +109,7 @@
   /* ============ Overlay inicial ============ */
   #inicio {
     position: fixed; inset: 0; z-index: 20;
-    background: radial-gradient(ellipse at 50% 30%, #14261a 0%, #0a120d 70%);
+    background: radial-gradient(ellipse at 50% 30%, #2a2014 0%, #0f0c08 70%);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 28px; text-align: center; padding: 24px;
     transition: opacity 0.5s ease;
@@ -120,8 +126,6 @@
     background: #fff; border-radius: 16px; padding: 18px;
     display: flex; flex-direction: column; align-items: center; gap: 10px;
   }
-  #qr-alvo { width: 196px; height: 196px; display: grid; place-items: center; }
-  #qr-alvo img, #qr-alvo canvas { width: 196px !important; height: 196px !important; }
   #qr-status { color: #333; font-size: 12px; font-weight: 600; }
   #qr-status.on { color: #1a9d4b; }
 
@@ -136,6 +140,8 @@
   #btn-jogar:hover { transform: scale(1.04); }
   #teclas { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; color: var(--txt-dim); font-size: 13px; }
   #teclas b { color: var(--txt); background: rgba(255,255,255,0.1); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; font-weight: 700; margin-right: 5px; }
+
+
 
   #fim {
     position: fixed; inset: 0; z-index: 30; display: none;
@@ -159,17 +165,25 @@
 
 <div id="hud">
   <div id="placar">
-    <div class="time azul"><span class="chip"></span>AZU</div>
-    <div class="gols"><span id="gol-azul">0</span><span style="opacity:.4">–</span><span id="gol-verm">0</span></div>
-    <div class="time verm"><span class="chip"></span>VER</div>
-    <div class="relogio" id="relogio">05:00</div>
+    <div class="time azul"><span class="chip"></span>JESSICA</div>
+    <div class="gols"><span id="pts-jessica">0</span><span style="opacity:.4">–</span><span id="pts-mike">0</span></div>
+    <div class="time verm"><span class="chip"></span>MIKE</div>
+    <div class="relogio" id="relogio">10:00</div>
+    <div class="relogio" id="nivel-txt">NÍVEL 1</div>
   </div>
 
-  <div id="conexao"><span class="dot"></span><span id="conexao-txt">Sem controle</span></div>
+  <div id="conexoes">
+    <div class="conexao" id="con-jessica"><span class="dot"></span><span>Jessica: teclado</span></div>
+    <div class="conexao" id="con-mike"><span class="dot"></span><span>Mike: teclado</span></div>
+  </div>
 
-  <div id="jogador-info">
-    <div id="jogador-nome">—</div>
-    <div id="stamina-trilho"><div id="stamina-barra"></div></div>
+  <div class="jogador-info" id="info-jessica">
+    <div class="nome">JESSICA <span class="vidas" id="vidas-jessica">● ● ●</span></div>
+    <div class="stamina-trilho"><div class="stamina-barra" id="stamina-jessica"></div></div>
+  </div>
+  <div class="jogador-info" id="info-mike">
+    <div class="nome">MIKE <span class="vidas" id="vidas-mike">● ● ●</span></div>
+    <div class="stamina-trilho"><div class="stamina-barra" id="stamina-mike"></div></div>
   </div>
 
   <div id="aviso"></div>
@@ -178,28 +192,33 @@
 <div id="minimapa">
   <canvas id="mm-canvas"></canvas>
   <div class="legenda">
-    <span><i style="background:#2f7de1"></i>Azul</span>
-    <span><i style="background:#d8452e"></i>Vermelho</span>
-    <span><i style="background:#52d273;border-radius:2px"></i>Você</span>
+    <span><i style="background:#2f7de1"></i>Jessica</span>
+    <span><i style="background:#d8452e"></i>Mike</span>
+    <span><i style="background:#1b4c8a;border:1px solid #888"></i>Policiais</span>
+    <span><i style="background:#5a3f8f;border:1px solid #888"></i>Caçadores</span>
   </div>
 </div>
 
 <div id="inicio">
-  <h1>Futebol <span>3D</span></h1>
-  <p>Escaneie o QR Code com o celular para usá-lo como controle, ou jogue direto no teclado.</p>
+  <h1>Fuga do <span>Tribunal</span></h1>
+  <p>Dois fugitivos, dois celulares. Cada um escaneia o <b>mesmo</b> QR Code: o primeiro vira a Jessica, o segundo vira o Mike. São 6 níveis com 3 vidas cada (o último é uma selva com bichos!). Jessica VOA e Mike SOME por 10s (recarga 25s). Preso dá ponto pro rival; acabaram as vidas, todo mundo avança de nível. Dá pra jogar no teclado também.</p>
   <div id="qr-card">
     <div id="qr-alvo"></div>
     <div id="qr-status">Gerando código…</div>
   </div>
   <div id="teclas">
-    <span><b>WASD</b>mover</span>
+    <span><b>WASD</b>Jessica</span>
     <span><b>Espaço</b>sprint</span>
-    <span><b>Z</b>passe</span>
-    <span><b>C</b>chute</span>
-    <span><b>V</b>desarme</span>
-    <span><b>Shift</b>trocar</span>
+    <span><b>E</b>esquiva</span>
+    <span><b>Q</b>poder ✈</span>
+    <span><b>Setas</b>Mike</span>
+    <span><b>Shift</b>sprint</span>
+    <span><b>Enter</b>esquiva</span>
+    <span><b>P</b>poder 👻</span>
   </div>
-  <button id="btn-jogar">Começar partida</button>
+  <button id="btn-jogar">Abrir a sessão</button>
+</div>
+
 </div>
 
 <div id="fim">
@@ -208,13 +227,26 @@
   <button id="btn-denovo">Jogar novamente</button>
 </div>
 
+<script>
+  // qualquer erro do jogo aparece no card do QR (pra depurar sem console)
+  addEventListener('error', e => {
+    const el = document.getElementById('qr-status');
+    if (el && e.message) el.textContent = '⚠ ' + e.message;
+  });
+  addEventListener('unhandledrejection', e => {
+    const el = document.getElementById('qr-status');
+    if (el) el.textContent = '⚠ ' + (e.reason && e.reason.message || e.reason);
+  });
+</script>
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script type="importmap">
 {
   "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
+    "three": "https://unpkg.com/three@0.182.0/build/three.webgpu.js",
+    "three/webgpu": "https://unpkg.com/three@0.182.0/build/three.webgpu.js",
+    "three/tsl": "https://unpkg.com/three@0.182.0/build/three.tsl.js",
+    "three/addons/": "https://unpkg.com/three@0.182.0/examples/jsm/"
   }
 }
 </script>
